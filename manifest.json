@@ -1,0 +1,18 @@
+{
+   "content_scripts": [ {
+      "all_frames": true,
+      "css": [ "invert.css" ],
+      "js": [ "invert.js" ],
+      "matches": [ "\u003Call_urls\u003E" ],
+      "match_about_blank": true,
+      "run_at": "document_start"
+   } ],
+   "description": "Invert images for no good reason",
+   "icons": {
+      "128": "deluminate-128.png"
+   },
+   "name": "Deluminate",
+   "manifest_version": 2,
+   "permissions": [ "\u003Call_urls\u003E", "tabs" ],
+   "version": "0.1.0"
+}
