@@ -1,48 +1,5 @@
 var scheme_prefix;
-var fullscreen_workaround;
-var animGifHandler;
-
-function onExtensionMessage(request) {
-  if (request.enabled && request.scheme != 'normal') {
-    hc = scheme_prefix + request.scheme + ' ' + request.modifiers;
-    if (request.settings.hw_accel === 'enabled' ||
-        request.settings.hw_accel !== 'disabled' && window.devicePixelRatio > 1) {
-      hc += ' hw_accel';
-    }
-    document.documentElement.setAttribute('hc', hc);
-    addFullscreenWorkaround();
-  } else {
-    document.documentElement.removeAttribute('hc');
-    workaround_div = document.getElementById("deluminate_fullscreen_workaround");
-    if (workaround_div != null)
-      workaround_div.remove();
-  }
-  if (request.enabled && request.settings.detect_animation === 'enabled' &&
-      request.scheme == 'delumine-smart') {
-    Array.prototype.forEach.call(
-      document.querySelectorAll('img[src*=".gif"], img[src*=".GIF"]'),
-      detectAnimatedGif);
-    animGifHandler.observe(document.documentElement, {
-      childList: true,
-      subtree: true
-    });
-  } else {
-    animGifHandler.disconnect();
-  }
-}
-
-function addFullscreenWorkaround() {
-  /* If the DOM is not loaded, wait before adding the workaround to it.
-   * Otherwise add it immediately. */
-  if (document.body == null) {
-    document.addEventListener('DOMContentLoaded', function() {
-      document.body.appendChild(fullscreen_workaround);
-    });
-  } else if (document.body != null &&
-      document.getElementById("deluminate_fullscreen_workaround") == null) {
-    document.body.appendChild(fullscreen_workaround);
-  }
-}
+var imageHandler;
 
 function onEvent(evt) {
   if (evt.keyCode == 122 /* F11 */ &&
@@ -116,8 +73,7 @@ function isAnimatedGif(src, cb) {
   request.send();
 }
 
-function markCssImages(tag) {
-  var bgImage = window.getComputedStyle(tag)['background-image'];
+function markImages(tag) {
   // Too many descendents means this is probably not _just_ an image.
   if (tag.childElementCount > 1) {
     return;
@@ -125,31 +81,49 @@ function markCssImages(tag) {
     return;
   }
   var imageType;
-  if (containsAny(bgImage, ['data:image/png', '.png', '.PNG'])) {
-    imageType = 'png';
-  } else if (containsAny(bgImage, ['data:image/gif', '.gif', '.GIF'])) {
-    imageType = 'gif';
-  } else if (containsAny(bgImage,
-      ['data:image/jpeg', '.jpg', '.JPG', '.jpeg', '.JPEG'])) {
-    imageType = 'jpg';
+  var bgImage;
+  if (tag.tagName == 'CANVAS') {
+    imageType = 'canvas';
+  } else if (tag.tagName == 'VIDEO') {
+    imageType = 'video';
+  } else if (tag.tagName == 'EMBED') {
+    if (tag.attributes.type.indexOf('pdf') >= 0) {
+      imageType = 'pdf';
+    } else {
+      imageType = 'embed';
+    }
+  } else if (tag.tagName == 'OBJECT') {
+    imageType = 'object';
+  } else {
+    if (tag.tagName == 'IMG') {
+      bgImage = tag.src;
+    } else {
+      bgImage = window.getComputedStyle(tag)['background-image'];
+    }
+    if (containsAny(bgImage, ['data:image/png', '.png', '.PNG'])) {
+      imageType = 'png';
+    } else if (containsAny(bgImage, ['data:image/gif', '.gif', '.GIF'])) {
+      imageType = 'gif';
+    } else if (containsAny(bgImage,
+        ['data:image/jpeg', '.jpg', '.JPG', '.jpeg', '.JPEG'])) {
+      imageType = 'jpg';
+    } else if (containsAny(bgImage, ['.webp', '.WEBP'])) {
+      imageType = 'webp';
+    } else if (tag.tagName == 'IMG') {
+      imageType = 'other';
+    }
   }
   if (imageType) {
-    tag.setAttribute('deluminate_imageType', imageType);
+    tag.setAttribute('imageType', imageType);
   }
 }
 
 function detectAnimatedGif(tag) {
   isAnimatedGif(tag.src, function(isAnimated) {
     if (isAnimated) {
-      tag.setAttribute('deluminate_imageType', 'animated gif');
+      tag.setAttribute('imageType', 'animated gif');
     }
   });
-}
-
-function deepImageProcessing() {
-  Array.prototype.forEach.call(
-    document.querySelectorAll('body *:not([style*="url"])'),
-    markCssImages);
 }
 
 function init() {
@@ -160,29 +134,32 @@ function init() {
     scheme_prefix = 'nested_';
   }
 
-  fullscreen_workaround = document.createElement('div');
-  fullscreen_workaround.id = scheme_prefix + "deluminate_fullscreen_workaround";
-
-  chrome.runtime.onMessage.addListener(onExtensionMessage);
-  chrome.runtime.sendMessage({'init': true, 'url': window.top.document.baseURI},
-      onExtensionMessage);
   document.addEventListener('keydown', onEvent, false);
-  document.addEventListener('DOMContentLoaded', deepImageProcessing);
 
-  animGifHandler = new MutationObserver(function(mutations, obs) {
+  imageHandler = new MutationObserver(function(mutations, obs) {
     for(var i=0; i<mutations.length; ++i) {
       for(var j=0; j<mutations[i].addedNodes.length; ++j) {
         var newTag = mutations[i].addedNodes[j];
         if (newTag.querySelectorAll) {
           Array.prototype.forEach.call(
-            newTag.querySelectorAll('*:not([style*="url"])'),
-            markCssImages);
+            newTag.querySelectorAll('*'),
+            markImages);
           Array.prototype.forEach.call(
             newTag.querySelectorAll('img[src*=".gif"], img[src*=".GIF"]'),
             detectAnimatedGif);
         }
       }
     }
+  });
+  Array.prototype.forEach.call(
+    document.querySelectorAll('*'),
+    markImages);
+  Array.prototype.forEach.call(
+    document.querySelectorAll('img[src*=".gif"], img[src*=".GIF"]'),
+    detectAnimatedGif);
+  imageHandler.observe(document.documentElement, {
+    childList: true,
+    subtree: true
   });
 }
 
