@@ -1,0 +1,90 @@
+/* Apply the correct filter */
+
+html[data-deluminate-filter^=invert] {
+  -webkit-filter: invert() hue-rotate(180deg) brightness(105%) contrast(105%);
+}
+
+html[data-deluminate-filter^=hue-rotate] {
+  -webkit-filter: hue-rotate(180deg) brightness(95%) contrast(105%);
+}
+
+/* Uninvert select items within the document.
+ * Note: Chrome clears -webkit-filter on all full-screen ancestor tags, killing
+ * the top-level delumination filter. This is usually desirable (e.g., for
+ * Youtube videos), so instead of fighting it, just avoid trying to "uninvert"
+ * images in this scenario.
+ */
+
+/* Uninvert dialog boxes (except the "Compose" box in Gmail, identified by the
+ * "aria-labelledby" attribute. */
+html[data-deluminate-filter^=invert]:not(*:-webkit-full-screen-ancestor) \
+    [role="dialog"]:not([aria-labelledby]) {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+
+html[data-uninvert*="png"]:not(*:-webkit-full-screen-ancestor) [imageType="png"] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert*="png"]:not(*:-webkit-full-screen-ancestor) [imageType="png"] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert*="gif"]:not(*:-webkit-full-screen-ancestor) [imageType="gif"] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert*="gif"]:not(*:-webkit-full-screen-ancestor) [imageType="gif"] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert*="jpg"]:not(*:-webkit-full-screen-ancestor) [imageType="jpg"] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert*="jpg"]:not(*:-webkit-full-screen-ancestor) [imageType="jpg"] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert*="canvas"]:not(*:-webkit-full-screen-ancestor) [imageType="canvas"] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert*="canvas"]:not(*:-webkit-full-screen-ancestor) [imageType="canvas"] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert*="video"]:not(*:-webkit-full-screen-ancestor) [imageType="video"] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert*="video"]:not(*:-webkit-full-screen-ancestor) [imageType="video"] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert*="embed"]:not(*:-webkit-full-screen-ancestor) [imageType="embed"] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert*="embed"]:not(*:-webkit-full-screen-ancestor) [imageType="embed"] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert*="object"]:not(*:-webkit-full-screen-ancestor) [imageType="object"] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert*="object"]:not(*:-webkit-full-screen-ancestor) [imageType="object"] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert*="other"]:not(*:-webkit-full-screen-ancestor) [imageType="other"] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert*="other"]:not(*:-webkit-full-screen-ancestor) [imageType="other"] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert]:not(*:-webkit-full-screen-ancestor) [data-uninvert] {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
+html[data-uninvert]:not(*:-webkit-full-screen-ancestor) [data-uninvert] * {
+  -webkit-filter: none !important;
+}
+
+html[data-uninvert]:-webkit-full-screen-ancestor video {
+  -webkit-filter: contrast(95%) brightness(95%) hue-rotate(180deg) invert();
+}
