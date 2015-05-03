@@ -1,0 +1,178 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Deluminate Common Tests</title>
+  <link rel="shortcut icon" type="image/png" href="jasmine/lib/jasmine-core/jasmine_favicon.png">
+  <link rel="stylesheet" type="text/css" href="jasmine/lib/jasmine-core/jasmine.css">
+
+  <script type="text/javascript" src="jasmine/lib/jasmine-core/jasmine.js"></script>
+  <script type="text/javascript" src="jasmine/lib/jasmine-core/jasmine-html.js"></script>
+  <script type="text/javascript" src="jasmine/lib/jasmine-core/boot.js"></script>
+  <script type="text/javascript" src="../common.js"></script>
+  <script type="text/javascript">window.addEventListener('DOMContentLoaded', function() {
+    describe('Site constructor', function() {
+      var typical_url = 'http://www.example.com/index.html';
+      var fancy_url = 'https://subdomain2.subdomain1.example.com/path/to/resource.php?arg1=1&arg2=2';
+
+      // Tests of the domain hierarchy
+      it("Separates a URL's domain", function() {
+        var test = new Site(typical_url);
+        expect(test.domain_hierarchy).toContain('example.com');
+      });
+      it('Does not include path components in the domain hierarchy', function() {
+        var test = new Site(typical_url);
+        expect(test.domain_hierarchy).not.toContain('index');
+        expect(test.domain_hierarchy).not.toContain('index.html');
+      });
+      it("Captures a URL's subdomain if present", function() {
+        var test = new Site(typical_url);
+        expect(test.domain_hierarchy).toContain('www');
+      });
+      it("Presents a FQDN in hierarchical order", function() {
+        var test = new Site(fancy_url);
+        expect(test.domain_hierarchy).toEqual(['example.com', 'subdomain1', 'subdomain2']);
+      });
+
+      // Tests of the page hierarchy
+      it("Separates a URL's path", function() {
+        var test = new Site(typical_url);
+        expect(test.page_hierarchy).toContain('index.html');
+      });
+      it("Presents a path in hierarchical order", function() {
+        var test = new Site(fancy_url);
+        expect(test.page_hierarchy).toEqual(['path', 'to', 'resource.php']);
+      });
+
+      // Test of alternative constructor
+      it("Can build an identical site from a site's data", function() {
+          var test = new Site(fancy_url);
+          var test2 = Site.build(test.domain_hierarchy, test.page_hierarchy);
+          expect(test2).toEqual(test);
+      });
+    });
+
+    describe('Hierarchy constructor', function() {
+      var simple_hierarchy = ['example.com'];
+      var full_hierarchy = ['example.com', 'subdomain1', 'subdomain2'];
+
+      beforeEach(function() {
+        test = new Hierarchy();
+        test.set(simple_hierarchy, 'simple_hierarchy');
+      });
+
+      // Tests of "get" with fallback logic
+      it('Can retrieve data', function() {
+        expect(test.get(simple_hierarchy)).toBe('simple_hierarchy');
+      });
+      it('Can fall back to ancestor data when exact data not present', function() {
+        expect(test.get(full_hierarchy)).toBe('simple_hierarchy');
+      });
+      it('Will not fall back when exact data present', function() {
+        test.set(full_hierarchy, 'full_hierarchy');
+        expect(test.get(full_hierarchy)).toBe('full_hierarchy');
+      });
+      it('Represents the empty chain as a unique element', function() {
+        test.set([], 'empty chain');
+        expect(test.get(simple_hierarchy)).toBe('simple_hierarchy');
+        expect(test.get([])).toBe('empty chain');
+      });
+
+      // Tests of get_exact with NO fallback logic
+      it('Can "get_exact" to retrieve nothing when exact data not present', function() {
+        expect(test.get_exact(full_hierarchy)).toBeUndefined();
+      });
+      it('Can "get_exact" to retrieve exact data when present', function() {
+        test.set(full_hierarchy, 'full_hierarchy');
+        expect(test.get_exact(full_hierarchy)).toBe('full_hierarchy');
+      });
+
+      // Tests of remove
+      it('Can remove data', function() {
+        expect(test.get(simple_hierarchy)).toBe('simple_hierarchy');
+        expect(function() {
+          test.remove(simple_hierarchy)
+        }).not.toThrow();
+        expect(test.get(simple_hierarchy)).toBeUndefined();
+      });
+      it('Removing data does not break fallback logic', function() {
+        test.set(full_hierarchy, 'full_hierarchy');
+        expect(test.get(full_hierarchy)).toBe('full_hierarchy');
+        expect(function() {
+          test.remove(full_hierarchy)
+        }).not.toThrow();
+        expect(test.get(full_hierarchy)).toBe('simple_hierarchy');
+      });
+    });
+
+    describe('Settings constructor', function() {
+      var typical_url = 'http://www.example.com/index.html';
+      var fancy_url = 'https://subdomain2.subdomain1.example.com/path/to/resource.php?arg1=1&arg2=2';
+      var default_settings = { scheme: 'default scheme', mods: [] };
+      var settings = { scheme: 'test_scheme', mods: ['mod1', 'mod2'] };
+      var settings2 = { scheme: 'second_test_scheme', mods: ['mod1'] };
+      var test = undefined;
+
+      beforeEach(function() {
+        test = new Settings();
+      });
+
+      // Tests of saving settings
+      it('Saves and loads data for a URL', function() {
+        expect(function() {
+          test.save(typical_url, settings);
+        }).not.toThrow();
+        expect(test.load(typical_url)).toEqual(settings);
+      });
+      it('Saves and loads a Site object the same as a URL', function() {
+        expect(function() {
+          test.save(new URL(typical_url), settings);
+        }).not.toThrow();
+        expect(test.load(typical_url)).toEqual(settings);
+      });
+
+      // Test of loading settings
+      it('Loads closest matching saved settings', function() {
+        var site = new Site(typical_url);
+        var base_site = new Site.build(site.domain_hierarchy.slice(0, 1));
+        test.save(base_site, settings);
+        expect(test.load(typical_url)).toEqual(settings);
+        expect(test.load(fancy_url)).toEqual(settings);
+      });
+      it('Loads the default if no matching settings found', function() {
+        test.set_site_default(default_settings);
+        test.save(typical_url, settings);
+        expect(test.load(fancy_url)).toEqual(default_settings);
+      });
+      it('Loads nothing if nothing saved and no default', function() {
+        expect(test.load(fancy_url)).toBeUndefined();
+      });
+
+      // Tests of deleting settings
+      it('Can remove saved settings', function() {
+        test.save(typical_url, settings);
+        expect(test.load(typical_url)).toEqual(settings);
+        expect(function() {
+          test.remove(typical_url);
+        }).not.toThrow();
+        expect(test.load(typical_url)).toBeUndefined();
+      });
+      it('Can remove specific pages without removing domain settings', function() {
+        var site = new Site(typical_url);
+        var base_site = new Site.build(site.domain_hierarchy.slice(0));
+        test.save(base_site, settings);
+        test.save(site, settings2);
+        expect(test.load(base_site)).toEqual(settings);
+        expect(test.load(site)).toEqual(settings2);
+        expect(function() {
+          test.remove(site);
+        }).not.toThrow();
+        expect(test.load(site)).toEqual(settings);
+      });
+    });
+  }, false)</script>
+</head>
+<body>
+</body>
+</html>
+
+<!-- vim: set et ts=2 sts=2 sw=2 :-->
