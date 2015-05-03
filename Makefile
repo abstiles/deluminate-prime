@@ -8,8 +8,8 @@ NAME := $(shell basename $$(pwd))
 
 LAST_VERSION_COMMIT := $(shell git blame manifest.json | grep \\bversion \
 	| cut -d' ' -f1)
-BUILD_NUM := $(shell git log $(LAST_VERSION_COMMIT)..HEAD --oneline \
-	| wc -l | tr -d ' ')
+BUILD_NUM := $(shell git log $(LAST_VERSION_COMMIT)..HEAD --oneline 2>/dev/null \
+	|| : | wc -l | tr -d ' ')
 PKG_SUFFIX := $(shell git symbolic-ref --short HEAD \
 	| sed '/^master$$/d;s/^/-/')
 
@@ -32,3 +32,4 @@ $(BUILD_DIR):
 
 clean:
 	rm -f $(NAME)*.zip
+	rm -rf $(BUILD_DIR)
