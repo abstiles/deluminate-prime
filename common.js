@@ -1,6 +1,44 @@
 (function() {
   "use strict";
 
+  // Abstract away all the stupid details required to inherit Error types
+  function ErrorTypeFactory(name, f) {
+    if (typeof f === 'undefined') {
+      // At the very least, set the message correctly
+      f = function(message) {
+        this.message = message;
+      }
+    }
+    var newError = function(message) {
+      var error = Error.apply(this, arguments);
+
+      error.name = this.name = name;
+      this.stack = error.stack;
+      f.apply(this, arguments);
+    }
+    newError.prototype = Object.create(Error.prototype);
+    newError.prototype.constructor = f;
+    return newError;
+  }
+
+  var NotEnoughArgumentsError = ErrorTypeFactory('NotEnoughArgumentsError');
+
+  // Raise an error if an object is not of the expected type
+  function expect_type(value, type) {
+    if (!(value instanceof type)) {
+      throw new TypeError('Expected type ' + type.constructor.name);
+    }
+  }
+
+  // A strict version of obj[name] that throws errors when the key isn't found
+  function get(obj, name) {
+    var value = obj[name];
+    if (typeof value === 'undefined') {
+      throw new TypeError(name + ' is not a valid value');
+    }
+    return value;
+  }
+
   // Constructor for objects representing Site URLs.
   function Site(url) {
     if (!(this instanceof Site)) {
@@ -102,6 +140,7 @@
     this.save = function(site, site_settings) {
       // Coerce site to a proper Site object if it's not one already.
       site = site instanceof Site ? site : Site(site);
+      expect_type(site_settings, SiteSettings);
       var site_domain = this.storage.get_exact(site.domain_hierarchy);
       if (!(site_domain instanceof Hierarchy)) {
         site_domain = new Hierarchy();
@@ -140,10 +179,59 @@
     }
   }
 
+  var Filter = Object.freeze({
+    deluminate: 'invert() hue-rotate(180deg) brightness(105%) contrast(105%)',
+    reluminate: 'hue-rotate(180deg) brightness(95%) contrast(105%)',
+    noinvert: 'none'
+  });
+
+  var Modifier = Object.freeze({
+    dim10: { filter: 'brightness(90%)' },
+    dim20: { filter: 'brightness(80%)' },
+    dim30: { filter: 'brightness(70%)' },
+    dim40: { filter: 'brightness(60%)' },
+    dim50: { filter: 'brightness(50%)' },
+    low_contrast: { filter: 'contrast(85%)' },
+    hw_accel: { rules: [ '-webkit-transform: translateZ(0)' ] }
+  });
+
+  var CorrectionType = Object.freeze({
+    smart: 'jpg canvas video embed object other',
+    all: 'png gif jpg canvas video embed object other',
+    none: '',
+  });
+
+  function SiteSettings(filter, correction_mode, mods) {
+    if (!(this instanceof SiteSettings)) {
+      return new SiteSettings(filter, correction_mode, mods);
+    }
+    if (typeof filter === 'undefined') {
+      throw new NotEnoughArgumentsError('filter object is required');
+    }
+    correction_mode = typeof correction_mode !== 'undefined' ? correction_mode
+      : 'none';
+    mods = typeof mods !== 'undefined' ? mods : [];
+    // Just verify that the arguments represent actual things
+    get(Filter, filter);
+    get(CorrectionType, correction_mode);
+    mods.forEach(function(mod) {
+      get(Modifier, mod);
+    });
+    this.filter = filter;
+    this.correction_mode = correction_mode;
+    this.mods = mods;
+  }
+
   // Export objects to global namespace
   window.Site = Site;
   window.Hierarchy = Hierarchy;
   window.Settings = Settings;
+  window.Filter = Filter;
+  window.Modifier = Modifier;
+  window.CorrectionType = CorrectionType;
+  window.SiteSettings = SiteSettings;
+  window.ErrorTypeFactory = ErrorTypeFactory;
+  window.NotEnoughArgumentsError = NotEnoughArgumentsError;
 })();
 
 // vim: et ts=2 sts=2 sw=2

@@ -10,6 +10,72 @@
   <script type="text/javascript" src="jasmine/lib/jasmine-core/boot.js"></script>
   <script type="text/javascript" src="../common.js"></script>
   <script type="text/javascript">window.addEventListener('DOMContentLoaded', function() {
+    describe('Error Type Factory', function() {
+      var TestError = ErrorTypeFactory('TestError');
+      var FancyError = ErrorTypeFactory('FancyError', function(message, prop){
+        this.message = message;
+        this.new_property = prop;
+      })
+
+      // Tests confirming error objects behave as expected
+      it('Creates errors with all expected properties', function() {
+        var err = new TestError('test message');
+        expect(err.name).toBe('TestError');
+        expect(err.message).toBe('test message');
+        expect(err.constructor).not.toBeUndefined();
+      });
+      it('Creates errors with custom properties', function() {
+        var err = new FancyError('test message', 'test value');
+        expect(err.new_property).toBe('test value');
+      });
+      it('Creates errors with useful string representations', function() {
+        var err = new TestError('test message');
+        expect(err.toString()).toBe('TestError: test message');
+      });
+
+      // Tests of catching these errors
+      it('Creates errors that identify as instances of their constructor', function() {
+        expect(function() {
+          throw new TestError('test message');
+        }).toThrowError(TestError);
+      });
+      it('Creates errors that identify as instances of Error', function() {
+        expect(function() {
+          throw new TestError('test message');
+        }).toThrowError(Error);
+      });
+      it('Creates errors with usable messages', function() {
+        expect(function() {
+          throw new TestError('test message');
+        }).toThrowError(Error, 'test message');
+      });
+      it('Creates errors with usable stack traces', function() {
+        var err;
+        try {
+          throw new TestError('test message');
+        } catch(e) {
+          err = e;
+        }
+        expect(err.stack).toMatch('TestError: test message');
+      });
+      it('Creates errors that can be distinguished from each other', function() {
+          expect(function() {
+            throw new FancyError('other message');
+          }).not.toThrowError(TestError);
+      });
+
+      // Test interop
+      it("Creates error types that don't trample on each other", function() {
+        var err = new TestError('test message');
+        var err2 = new FancyError('other message', 'test value');
+        expect(err.name).toBe('TestError');
+        expect(err.message).toBe('test message');
+        expect(err.toString()).toBe('TestError: test message');
+        expect(err2.name).toBe('FancyError');
+        expect(err2.message).toBe('other message');
+        expect(err2.toString()).toBe('FancyError: other message');
+      });
+    });
     describe('Site constructor', function() {
       var typical_url = 'http://www.example.com/index.html';
       var fancy_url = 'https://subdomain2.subdomain1.example.com/path/to/resource.php?arg1=1&arg2=2';
@@ -107,9 +173,10 @@
     describe('Settings constructor', function() {
       var typical_url = 'http://www.example.com/index.html';
       var fancy_url = 'https://subdomain2.subdomain1.example.com/path/to/resource.php?arg1=1&arg2=2';
-      var default_settings = { scheme: 'default scheme', mods: [] };
-      var settings = { scheme: 'test_scheme', mods: ['mod1', 'mod2'] };
-      var settings2 = { scheme: 'second_test_scheme', mods: ['mod1'] };
+      var default_settings = new SiteSettings('deluminate', 'smart');
+      var settings = new SiteSettings('deluminate', 'all');
+      var settings2 = new SiteSettings('reluminate', 'none',
+        ['low_contrast', 'hw_accel']);
       var test = undefined;
 
       beforeEach(function() {
@@ -167,6 +234,77 @@
           test.remove(site);
         }).not.toThrow();
         expect(test.load(site)).toEqual(settings);
+      });
+    });
+
+    describe('SiteSettings constructor', function() {
+      var valid_filters = Object.keys(Filter);
+      var valid_modifiers = Object.keys(Modifier);
+      var valid_corrections = Object.keys(CorrectionType);
+      var test_filter = valid_filters[0];
+      var test_correction_mode = valid_corrections[0];
+
+      // Tests of storing a site's filter
+      it('Requires a filter', function() {
+        expect(function () {
+          SiteSettings();
+        }).toThrowError(NotEnoughArgumentsError);
+      });
+      it('Accepts valid filters', function() {
+        var test;
+        expect(function () {
+          test = new SiteSettings(test_filter);
+        }).not.toThrow();
+        expect(test.filter).toBe(test_filter);
+      });
+      it('Rejects invalid filters', function() {
+        expect(function () {
+          SiteSettings('this will never be a valid filter');
+        }).toThrowError(TypeError);
+      });
+
+      // Tests of storing a site's correction mode
+      it('Defaults to correcting nothing if no mode specified', function() {
+        var test;
+        expect(function () {
+          test = new SiteSettings(test_filter);
+        }).not.toThrow();
+        expect(test.correction_mode).toBe('none');
+      });
+      it('Accepts valid correction modes', function() {
+        var test;
+        expect(function () {
+          test = new SiteSettings(test_filter, test_correction_mode);
+        }).not.toThrow();
+        expect(test.correction_mode).toBe(test_correction_mode);
+      });
+      it('Rejects invalid correction modes', function() {
+        expect(function () {
+          SiteSettings(test_filter, 'this will never be a valid');
+        }).toThrowError(TypeError);
+      });
+
+      // Tests of storing a site's modifiers
+      it('Defaults to no modifiers', function() {
+        var test;
+        expect(function () {
+          test = new SiteSettings(test_filter, test_correction_mode);
+        }).not.toThrow();
+        expect(test.mods).toEqual([]);
+      });
+      it('Accepts valid modifiers', function() {
+        var test;
+        expect(function () {
+          test = new SiteSettings(test_filter, test_correction_mode,
+            valid_modifiers);
+        }).not.toThrow();
+        expect(test.mods).toEqual(valid_modifiers);
+      });
+      it('Rejects invalid correction modes', function() {
+        expect(function () {
+          SiteSettings(test_filter, test_correction_mode,
+            ['low_contrast', 'invalid modifier']);
+        }).toThrowError(TypeError);
       });
     });
   }, false)</script>
