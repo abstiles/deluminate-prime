@@ -61,6 +61,12 @@
                     domain_hierarchy.slice(0).reverse().join('.') + '/' +
                     page_hierarchy.join('/'))
   }
+  Site.none = (function() {
+    var none = Object.create(Site.prototype);
+    none.domain_hierarchy = [];
+    none.page_hierarchy = [];
+    return none;
+  })();
 
   // Constructor for an object that stores hierarchical data and retrieves the
   // most-specific data available.
@@ -202,11 +208,11 @@
 
     // Helper function for setting the root element
     this.set_site_default = function(site_settings) {
-      this.storage.set([], site_settings);
+      this.save(Site.none, site_settings);
     }
     // Helper function for getting the root element
     this.site_default = function() {
-      this.storage.get([]);
+      this.load(Site.none);
     }
   }
 
