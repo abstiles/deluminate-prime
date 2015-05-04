@@ -316,7 +316,7 @@
         }).not.toThrow();
         expect(test.mods).toEqual(valid_modifiers);
       });
-      it('Rejects invalid correction modes', function() {
+      it('Rejects invalid modifiers', function() {
         expect(function () {
           SiteSettings(test_filter, test_correction_mode,
             ['low_contrast', 'invalid modifier']);
