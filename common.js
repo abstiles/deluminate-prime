@@ -126,6 +126,37 @@
         selection[DATA] = undefined;
       }
     };
+
+    // Read a list of addresses + data into this tree
+    this.load = function(tree_dump) {
+      var that = this;
+      tree_dump.forEach(function(entry) {
+        that.set(entry.address, entry.data);
+      });
+    }
+
+    // Convert a tree into a list of addresses + data
+    this.dump = function() {
+      return dump_tree(this.tree);
+    }
+
+    // Walk a subtree, flattening its component subtrees into a single list
+    var dump_tree = function(root, address) {
+      address = typeof address !== 'undefined' ? address : [];
+      var list = []
+      // Add the subtrees
+      Object.keys(root).forEach(function(key) {
+        if (typeof root[key] === 'undefined') { return; }
+        // Add the current node's data if we see it
+        if (key === DATA) {
+          list.push({ address: address, data: root[DATA] });
+          return;
+        }
+        // Add the dump of each subtree
+        Array.prototype.push.apply(list, dump_tree(root[key], address.concat([key])));
+      });
+      return list;
+    }
   }
 
   // Constructor for the global Settings object which stores site-specific

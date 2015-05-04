@@ -168,6 +168,22 @@
         }).not.toThrow();
         expect(test.get(full_hierarchy)).toBe('simple_hierarchy');
       });
+
+      // Tests of dumping data
+      it('Can flatten the tree into a list of address-data pairs', function() {
+        test.set(full_hierarchy, 'full_hierarchy');
+        test.set([], 'default')
+        var dump = test.dump();
+        expect(dump).toContain({ address: simple_hierarchy, data: 'simple_hierarchy'});
+        expect(dump).toContain({ address: full_hierarchy, data: 'full_hierarchy'});
+      });
+      it('Can reconstruct a flattened tree', function() {
+        var copy = new Hierarchy();
+        test.set(full_hierarchy, 'full_hierarchy');
+        test.set([], 'default')
+        copy.load(test.dump());
+        expect(copy.tree).toEqual(test.tree);
+      });
     });
 
     describe('Settings constructor', function() {
