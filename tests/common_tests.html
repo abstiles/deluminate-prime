@@ -251,6 +251,31 @@
         }).not.toThrow();
         expect(test.load(site)).toEqual(settings);
       });
+
+      // Tests of import/export
+      it('Can flatten settings into a list of sites and settings', function() {
+        var typical_site = Site(typical_url);
+        var fancy_site = Site(fancy_url);
+        test.set_site_default(default_settings);
+        test.save(typical_site, settings);
+        test.save(fancy_site, settings2);
+        var serialized = test.export();
+        expect(serialized).toContain({ site: typical_site, data: settings });
+        expect(serialized).toContain({ site: fancy_site, data: settings2 });
+        expect(serialized).toContain({ site: Site.none, data: default_settings });
+      });
+      it('Can reconstruct an exported list of settings', function() {
+        var typical_site = Site(typical_url);
+        var fancy_site = Site(fancy_url);
+        test.set_site_default(default_settings);
+        test.save(typical_site, settings);
+        test.save(fancy_site, settings2);
+        var serialized = test.export();
+        // By doing this, I can compare only the relevant data.
+        var original = JSON.parse(JSON.stringify(test));
+        var copy = JSON.parse(JSON.stringify(Settings.import(serialized)));
+        expect(copy).toEqual(original);
+      });
     });
 
     describe('SiteSettings constructor', function() {

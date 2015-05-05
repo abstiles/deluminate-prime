@@ -214,6 +214,31 @@
     this.site_default = function() {
       this.load(Site.none);
     }
+
+    // Serialize the settings in a form that can be efficiently stored with
+    // chrome.storage
+    this.export = function() {
+      var list = [];
+      this.storage.dump().forEach(function(domain_item) {
+        var domain_hierarchy = domain_item.address;
+        Array.prototype.push.apply(list,
+          domain_item.data.dump().map(function(page_item) {
+            var site = domain_hierarchy.length  === 0 ? Site.none
+              : Site.build(domain_hierarchy, page_item.address);
+            return { site: site, data: page_item.data };
+          })
+        );
+      });
+      return list;
+    }
+  }
+  // Read the serialized settings data
+  Settings.import = function(settings_list) {
+    var settings = new Settings();
+    settings_list.forEach(function(settings_item) {
+      settings.save(settings_item.site, settings_item.data);
+    });
+    return settings;
   }
 
   var Filter = Object.freeze({
