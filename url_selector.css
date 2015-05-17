@@ -1,0 +1,42 @@
+.url_selector span {
+  background-color: #DDD;
+  border: 2px solid #DDD;
+  border-radius: 5px;
+  font-family: sans-serif;
+}
+.url_selector span.host:not(#domain):after {
+  content: '.';
+}
+.url_selector span.path:before {
+  content: '/';
+}
+.url_selector span.start {
+  background-color: #BBF;
+  border: 2px solid #BBF;
+  border-right: none;
+  border-radius: 5px 0 0 5px;
+}
+.url_selector span.start ~ * {
+  background-color: #BBF;
+  border: 2px solid #BBF;
+  border-right: none;
+  border-left: none;
+  border-radius: 0;
+}
+.url_selector span.end {
+  background-color: #BBF;
+  border: 2px solid #BBF;
+  border-left: none;
+  border-radius: 0 5px 5px 0;
+}
+.url_selector span.start.end {
+  border: 2px solid #BBF;
+  border-radius: 5px;
+}
+.url_selector span.end ~ span {
+  background-color: #DDD;
+  border: 2px solid #DDD;
+  border-radius: 5px;
+}
+
+/* vim: set et ts=2 sts=2 sw=2 :*/

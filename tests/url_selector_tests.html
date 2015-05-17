@@ -1,0 +1,160 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Deluminate Common Tests</title>
+  <link rel="shortcut icon" type="image/png" href="jasmine/images/jasmine_favicon.png">
+  <link rel="stylesheet" type="text/css" href="jasmine/lib/jasmine-core/jasmine.css">
+
+  <script type="text/javascript" src="jasmine/lib/jasmine-core/jasmine.js"></script>
+  <script type="text/javascript" src="jasmine/lib/jasmine-core/jasmine-html.js"></script>
+  <script type="text/javascript" src="jasmine/lib/jasmine-core/boot.js"></script>
+
+  <!--<link rel="stylesheet" type="text/css" href="../popup.css">
+  -->
+
+  <script type="text/javascript" src="../common.js"></script>
+  <script type="text/javascript" src="../url_selector.js"></script>
+  <script type="text/javascript">window.addEventListener('DOMContentLoaded', function() {
+    describe('URL Selector Object', function() {
+      var select_element = document.getElementById('selector');
+      var selector;
+      var test_url = "https://sub2.sub1.example.com/path/to/whatever.php?arg1=1&arg2=2"
+      var split_url = ["sub2", "sub1", "example.com", "path", "to", "whatever.php"]
+
+      beforeEach(function() {
+        window.selector = selector = UrlSelector(test_url);
+        selector.render_to(select_element);
+      });
+
+      // Tests of rendering
+      it('renders each URL piece separately', function() {
+        expect(Array.prototype.map.call(select_element.children, function(x) {
+          return x.textContent;
+        })).toEqual(split_url);
+      });
+      it('does not render two URLs to the same place', function() {
+        // Rendering a second time should just overwrite anything already there
+        selector.render_to(select_element);
+        expect(Array.prototype.map.call(select_element.children, function(x) {
+          return x.textContent;
+        })).toEqual(split_url);
+      });
+
+      // Tests of selecting path elements by clicking
+      describe('changes selection to match user clicks', function() {
+        function pieces() {
+          return Array.prototype.slice.call(select_element.children);
+        }
+        function hosts() {
+          return pieces().filter(function(e) {
+              return e.classList.contains('host');
+            });
+        }
+        function paths() {
+          return pieces().filter(function(e) {
+              return e.classList.contains('path');
+            });
+        }
+        it('for every host component', function() {
+          hosts().forEach(function(host) {
+            host.click();
+            expect(host.classList).toContain('start');
+          });
+        });
+        it('for every path component', function() {
+          paths().forEach(function(path) {
+            path.click();
+            expect(path.classList).toContain('end');
+          });
+        });
+        it('with domain selection changes clearing path selections', function() {
+            last_path = paths().slice(-1)[0];
+            root_domain = hosts().slice(-1)[0];
+            last_path.click();
+            expect(last_path.classList).toContain('end');
+            root_domain.click();
+            expect(last_path.classList).not.toContain('end');
+            expect(root_domain.classList).toContain('end');
+        });
+        it('with path selection changes not clearing domain selections', function() {
+            last_path = paths().slice(-1)[0];
+            first_domain = hosts()[0];
+            root_domain = hosts().slice(-1)[0];
+            first_domain.click();
+            expect(first_domain.classList).toContain('start');
+            expect(root_domain.classList).toContain('end');
+            last_path.click();
+            expect(first_domain.classList).toContain('start');
+            expect(root_domain.classList).not.toContain('end');
+            expect(last_path.classList).toContain('end');
+        });
+      });
+
+      // Tests of getting the site object for the selected component
+      describe('creates site objects for selected elements', function() {
+        it('with a default of the full domain name', function() {
+          var site_domain = Site('http://sub2.sub1.example.com');
+          expect(selector.get_site()).toEqual(site_domain);
+        });
+        it('starting with the selected domain component', function() {
+          var site_domain = Site('http://sub1.example.com');
+          selector.select_host('sub1');
+          expect(selector.get_site()).toEqual(site_domain);
+        });
+        it('ending with the selected path component', function() {
+          var site_domain = Site('http://sub2.sub1.example.com/path');
+          selector.select_path('path');
+          expect(selector.get_site()).toEqual(site_domain);
+        });
+        it('representing the full selection', function() {
+          var site_domain = Site('http://example.com/path/to');
+          selector.select_host('example.com');
+          selector.select_path('to');
+          expect(selector.get_site()).toEqual(site_domain);
+        });
+      });
+
+      // Tests of selecting from a site object
+      describe('select from a site object', function() {
+        it('with a less specified subdomain', function() {
+          var site = Site('https://sub1.example.com');
+          selector.select_site(site);
+          expect(selector.get_site()).toEqual(site);
+        });
+        it('with a fully specified subdomain', function() {
+          var site = Site('https://sub2.sub1.example.com');
+          selector.select_site(site);
+          expect(selector.get_site()).toEqual(site);
+        });
+        it('with a partially specified path', function() {
+          var site = Site('https://sub2.sub1.example.com/path/to');
+          selector.select_site(site);
+          expect(selector.get_site()).toEqual(site);
+        });
+        it('with a partial subdomain and path', function() {
+          var site = Site('https://sub1.example.com/path');
+          selector.select_site(site);
+          expect(selector.get_site()).toEqual(site);
+        });
+        it('falling back to default for no site', function() {
+          var site = Site.none;
+          selector.select_site(site);
+          expect(selector.get_site()).toEqual(
+            Site('https://sub2.sub1.example.com'));
+        });
+        it('with only some overlap', function() {
+          var site = Site('https://xxx.sub1.example.com/path/elsewhere');
+          selector.select_site(site);
+          expect(selector.get_site()).toEqual(
+            Site('https://sub1.example.com/path'));
+        });
+      });
+    });
+  }, false)</script>
+</head>
+<body>
+<div id="selector"></div>
+</body>
+</html>
+
+<!-- vim: set et ts=2 sts=2 sw=2 :-->
